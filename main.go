@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -55,14 +57,25 @@ func main() {
 	// 署名作成
 	headerBase64 := base64.StdEncoding.EncodeToString([]byte(headerJson))
 	payloadBase64 := base64.StdEncoding.EncodeToString([]byte(payloadJson))
-	signature := fmt.Sprintf("%s.%s", headerBase64, payloadBase64)
+	signature := generateSignature(headerBase64, payloadBase64, "secretKey")
 	print("署名", signature)
 
 	// jwtToken作成
 	jwtToken := fmt.Sprintf("%s.%s.%s", headerBase64, payloadBase64, signature)
 	print("JWTトークン", jwtToken)
+
+	// 同様の手順でheaderとpayloadを暗号化して、署名と比較すれば改竄を検知できる。
 }
 
 func print(name string, value string) {
 	fmt.Printf("%s\n%s\n\n", name, value)
+}
+
+func generateSignature(header string, payload string, secretKey string) string {
+	message := fmt.Sprintf("%s.%s", header, payload)
+	key := []byte(secretKey)
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(message))
+	signature := base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+	return signature
 }
